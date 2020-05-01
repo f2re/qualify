@@ -11,6 +11,8 @@
                     order="1"
                     name="qestion2" 
                     ftype="text" 
+                    inputprepend="https://"
+                    required="required"
                     paramname="textfield" >
             <p slot="header">Question 2?</p>
         </oneItem>
@@ -18,7 +20,7 @@
         <oneItem    branch="1"
                     order="2"
                     name="qestion3" 
-                    ftype="text" 
+                    ftype="name" 
                     required="required"
                     paramname="namefield" >
             <p slot="header">What is your name?</p>
@@ -28,6 +30,7 @@
                     order="3"
                     name="qestion4" 
                     ftype="email" 
+                    required="required"
                     paramname="emailfield" >
             <p slot="header">Email</p>
         </oneItem>
@@ -35,8 +38,9 @@
         <oneItem    branch="1"
                     order="4"
                     name="qestion5" 
-                    ftype="text" 
-                    paramname="mobilefield" >
+                    ftype="phone" 
+                    required="required"
+                    paramname="phonefield" >
             <p slot="header">Mobile</p>
         </oneItem>
 
@@ -179,7 +183,8 @@
         <oneItem    branch="2"
                     order="3"
                     name="qestion3" 
-                    ftype="text" 
+                    ftype="name" 
+                    required="required"
                     paramname="namefield" >
             <p slot="header">What is your name?</p>
         </oneItem>
@@ -188,6 +193,7 @@
                     order="4"
                     name="qestion4" 
                     ftype="email" 
+                    required="required"
                     paramname="emailfield" >
             <p slot="header">Email</p>
         </oneItem>
@@ -195,8 +201,9 @@
         <oneItem    branch="2"
                     order="5"
                     name="qestion5" 
-                    ftype="text" 
-                    paramname="mobilefield" >
+                    ftype="phone" 
+                    required="required"
+                    paramname="phonefield" >
             <p slot="header">Mobile</p>
         </oneItem>
 
@@ -375,6 +382,22 @@
                       'value':6  },
                 ],
             }
+        },
+        methods: {
+          recaptcha() {
+              this.$recaptcha('login').then((token) => {
+                console.log(token) // Will print the token
+              })
+          }
+          // async recaptcha() {
+          //   // (optional) Wait until recaptcha has been loaded.
+          //   await this.$recaptchaLoaded()
+
+          //   // Execute reCAPTCHA with action "login".
+          //   const token = await this.$recaptcha('login')
+
+          //   return token;
+          // }
         }
     }
 </script>

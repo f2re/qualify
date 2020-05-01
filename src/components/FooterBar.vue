@@ -77,6 +77,7 @@
     
     .skipil-nav {
         background-color: #000000;
+        margin-top: 150px;
     }
 
     .copy{

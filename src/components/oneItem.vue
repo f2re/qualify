@@ -9,20 +9,25 @@
                     <hr>
                     <slot name="header"></slot>
                     
-                    <span class="input-notifer fix-width"
+                    <span class="input-notifer fix-width mb-3"
                           v-if="isField()"
-                          v-bind:class="{complete:retdata!=''}">
-                        <b-form-input class="mb-3 "                                
+                          v-bind:class="{complete:isvalidate}">
+                          <b-input-group :prepend="inputprepend" :append="inputappend">
+                            <b-form-input
                                 :name="name" 
                                 v-model="retdata"
                                 :required="required"
-                                v-on:keyup.enter="clickButton"
-                                :type="ftype" ></b-form-input>
+                                v-on:keyup.enter="isvalidate?clickButton():false"
+                                ref="input"
+                                :type="ftype!='phone'&&ftype!='name'?ftype:'text'" ></b-form-input>
+                          </b-input-group>
+                        
                     </span>
 
                     <b-form-textarea class="mb-3"
                             v-if="ftype=='textarea'"
                             v-model="retdata"
+                            ref="input"
                             :name="name" ></b-form-textarea>
 
                     <div v-if="ftype=='buttons'" class="d-flex flex-column">
@@ -38,6 +43,7 @@
                     <b-form-radio-group class="mb-3  d-flex flex-column" 
                             v-if="ftype=='radio'"
                             :name="name" 
+                            v-on:keyup.enter="isvalidate?clickButton():false"
                             v-model="retdata">
                             <b-form-radio class="radio-container"
                               v-for="r in dataforrender"
@@ -48,15 +54,23 @@
                     <b-form-checkbox-group class="mb-3 d-flex flex-column"
                             v-if="ftype=='checkbox'"
                             :name="name" 
+                            v-on:keyup.enter="isvalidate?clickButton():false"
                             v-model="retdata" >
                             <b-form-checkbox class="check-container"
                               v-for="r in dataforrender"
                               :key="r.value"
                               :value="r.value" >{{r.label}}</b-form-checkbox>                    
                     </b-form-checkbox-group>
+                    
+                    <b-alert show 
+                             variant="danger"
+                             v-if="!isvalidate&&validationerror!=''"
+                             >{{validationerror}}</b-alert>
 
                     <b-button variant="outline-primary" 
                               v-if="showButton()"
+                              v-bind:class="{disabled:!isvalidate}"
+                              :disabled="!isvalidate"
                               v-on:click="clickButton">Submit</b-button>
                     
                     <b-button variant="outline-primary" 
@@ -73,28 +87,74 @@
 </template>
 
 <script>
+    // regexp for validate phone number
+    const regexpPhone = RegExp("^($|(^\\+)?[0-9()-]{8,10})$");
+    // regexp for validate email
+    const regexpEmail = RegExp("[a-zA-Z0-9_\\.\\+-]+@[a-zA-Z0-9-]+\\.[a-zA-Z0-9-\\.]+");
 
     export default {
         name: 'oneItem',
-        props: [ 'branch', 'order','name', 'ftype', 'paramname', 'dataforrender', 'required' ],
+        props: [ 'branch',         // number of branch
+                  'order',         // order value in whole branch list
+                  'name',          // name of field
+                  'ftype',         // type of field
+                  'paramname',     // name of param
+                  'dataforrender', // data for checkbox render
+                  'required',      // is field required
+                  'inputprepend',  // prepend of unput suffix
+                  'inputappend',   // append of nput suffix
+                  ],
         data() {
             return {
                 // toggle class of buttons
                 buttonCheck:0,
                 // data for return
                 retdata:'',
+                // input validations
+                isvalidate:false,
+                // if validation is needed needvalidate
+                needvalidate:false,
+                // validation error message
+                validationerror:'',
             }
         },
         watch:{
+          // watching for order to show component
+          // if component transition show, then do code
           isShow(newval, oldval){
             if ( newval!= oldval ){
               let _vue = this;
-              setTimeout(function(){
+              this.$nextTick(() => {
+                // focus on input field
+                if ( typeof(this.$refs.input)!=='undefined' ){
+                  this.$refs.input.focus();
+                }
+                // scroll to middle of element
                 _vue.$el.scrollIntoView({block: "center", behavior: "smooth"});
-              }, 200);
-              
+
+                let check = function(event) {
+                  if ( event.code=='Enter' && _vue.isvalidate ){
+                    _vue.clickButton();
+                    event.preventDefault();
+                    // remove event listener
+                    window.removeEventListener('keydown', check);
+                    return;
+                  }
+                }
+
+                // if type of component is radio or checkboxes
+                // then bind event on keypress
+                // else unbind event
+                if ( [ 'radio','checkbox' ].indexOf(_vue.ftype)!==-1 ){
+                  window.addEventListener('keydown', check);
+                }else{
+                  window.removeEventListener('keydown', check);
+                }
+                } );
             }
-          }
+          },
+          // watch to change input values
+          retdata: 'checkValidation',
         },
         computed:{
           isShow:function(){
@@ -102,7 +162,8 @@
               return true;
             }
             return false;
-          }
+          },
+          
         },
         // component methods
         methods: {
@@ -116,7 +177,7 @@
             },
             // test if this component is field
             isField: function() {
-                if ( [ 'email','date','text','mobile' ].indexOf(this.ftype)!==-1 ){
+                if ( [ 'email','date','text','mobile','phone','name' ].indexOf(this.ftype)!==-1 ){
                     return true;
                 }
                 return false;
@@ -133,11 +194,69 @@
               
               this.$store.commit('nextStep',{ 'order':this.order, 'data':this.returnedData(), 'container':this.$el } );
               return;
-            }
+            },
+            // set error
+            setError:function(_e){
+              this.validationerror=_e;
+            },
+            // check validation rules
+            checkValidation:function(){
+              
+              // if validation required
+              if ( this.needvalidate ){
+
+                //check phone field type
+                if ( this.ftype=='phone' ){
+                  if ( this.retdata.match(regexpPhone) ){
+
+                    this.isvalidate = true;
+                    return true; 
+                  }else{ 
+                    this.setError("You must provide a valid mobile number");
+                    this.isvalidate = false;
+                    return false; 
+                  }
+                }
+
+                //check phone field type
+                if ( this.ftype=='name' ){
+                  if ( this.retdata=='' ){
+                    this.setError("Please provide your name");
+                    this.isvalidate = false;
+                    return false;
+                  }
+                }
+                
+                //check phone field type
+                if ( this.ftype=='email' ){
+                  if ( this.retdata.match(regexpEmail) ){
+                    this.isvalidate = true;
+                    return true;
+                  }else{
+                    this.setError("You must provide a valid email address");
+                    this.isvalidate = false;
+                    return false;
+                  }
+                }
+
+                if ( this.retdata=='' ){
+                  this.setError("Please fill input item");
+                  this.isvalidate = false;
+                  return false;
+                }
+              }
+              
+              this.isvalidate = true;
+              return true;
+            },
         },
         created: function () {
           if ( [ 'checkbox','radio' ].indexOf(this.ftype)!==-1 ){
             this.retdata=[];
+          }
+          // set needvalidate param
+          if ( this.required=='required' ){
+            this.needvalidate = true;
           }
         },
     }
